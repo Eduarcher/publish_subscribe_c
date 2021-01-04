@@ -144,10 +144,10 @@ void * client_thread(void *data) {
         if (ptr[0] == 43) {
             //Add word without '+' and last character
             char *newString = ptr + 1;
-            if (newString[strlen(newString)-1] == '\n'){
+            if (newString[strlen(newString)-1] == '\n'){  // Remove newline '\n' if exists
                 newString[strlen(newString)-1] = '\0';
             }
-            strcpy(cdata->tags[cdata->last_tag], newString); //Put word in a vector of this user
+            strcpy(cdata->tags[cdata->last_tag], newString); //Put subscribed word in a vector of this user
             printf("Teste %s\n", cdata->tags[cdata->last_tag]);
         }
 
