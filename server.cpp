@@ -143,29 +143,44 @@ void * client_thread(void *data) {
         // Check if the word starts with '+'
         if (ptr[0] == 43) {
             //Add word without '+' and last character
-            char *newString = ptr + 1;
+            char *newString = ptr + 1; // remove '+' from the start
             if (newString[strlen(newString)-1] == '\n'){  // Remove newline '\n' if exists
                 newString[strlen(newString)-1] = '\0';
             }
             strcpy(cdata->tags[cdata->last_tag], newString); //Put subscribed word in a vector of this user
-            printf("Teste %s\n", cdata->tags[cdata->last_tag]);
+            printf("Subscribed %s\n", cdata->tags[cdata->last_tag]);
+            cdata->last_tag += 1;
         }
 
         // Check if the word starts with '-'
         else if (ptr[0] == 45) {
             // Find word if exists
-            printf("unsubscribe");
-            char *newString = ptr + 1;
-            if (newString[strlen(newString)-1] == '\n'){
+            char *newString = ptr + 1; // remove '-' from the start
+            if (newString[strlen(newString)-1] == '\n'){ // Remove newline '\n' if exists
                 newString[strlen(newString)-1] = '\0';
             }
-            if (strcmp(newString, cdata->tags[cdata->last_tag]) == 0){
-                printf("iguais!");
+
+            // Verify if already subscribed
+            int i;
+            for (i = 0; i <= cdata->last_tag; ++i) {
+                if (strcmp(newString, cdata->tags[i]) == 0) {
+                    // if exist, unsubscribe
+                    printf("Unsubscribed %s\n", cdata->tags[i]);
+
+                    // verify if we need to 'move' subscriptions on the array to not have any empty
+                    if (i < cdata->last_tag){
+                        int j;
+                        for (j = i; j < cdata->last_tag; ++j) {
+                            strcpy(cdata->tags[j], cdata->tags[j+1]);
+                        }
+                    }
+                    cdata->last_tag -= 1;
+                    break;
+                }
             }
         }
-
-        //cdata->last_tag += 1;
         ptr = strtok(NULL, delim);
+        printf("Last subs  %s  %s  %d\n", cdata->tags[0], cdata->tags[cdata->last_tag], cdata->last_tag);
     }
 
     /*printf("---------");
