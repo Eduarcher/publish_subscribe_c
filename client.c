@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
 void usage(int argc, char **argv) {
 	printf("usage: %s <server IP> <server port>\n", argv[0]);
 	printf("example: %s 127.0.0.1 51511\n", argv[0]);
@@ -44,27 +46,31 @@ int main(int argc, char **argv) {
 
 	char buf[BUFSZ];
 	memset(buf, 0, BUFSZ);
-	printf("mensagem> ");
-	fgets(buf, BUFSZ-1, stdin);
-	size_t count = send(s, buf, strlen(buf)+1, 0);
-	if (count != strlen(buf)+1) {
-		logexit("send");
-	}
-
-	memset(buf, 0, BUFSZ);
-	unsigned total = 0;
 	while(1) {
-		count = recv(s, buf + total, BUFSZ - total, 0);
-		if (count == 0) {
-			// Connection terminated.
-			break;
-		}
-		total += count;
-	}
+        printf("mensagem> ");
+        fgets(buf, BUFSZ - 1, stdin);
+        size_t count = send(s, buf, strlen(buf) + 1, 0);
+        if (count != strlen(buf) + 1) {
+            logexit("send");
+        }
+
+        memset(buf, 0, BUFSZ);
+        unsigned total = 0;
+        while (1) {
+            printf("waiting to receive... ");
+            count = recv(s, buf + total, BUFSZ - total, 0);
+            printf("received? %s", buf);
+            total += count;
+            //if (count == 0) {
+                // Connection terminated.
+                break;
+            //}
+        }
+        printf("received %u bytes\n", total);
+    }
 	close(s);
-
-	printf("received %u bytes\n", total);
 	puts(buf);
-
 	exit(EXIT_SUCCESS);
 }
+
+#pragma clang diagnostic pop

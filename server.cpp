@@ -129,79 +129,70 @@ void * client_thread(void *data) {
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
 
-    char buf[BUFSZ];
-    memset(buf, 0, BUFSZ);
-    size_t count = recv(cdata->csock, buf, BUFSZ - 1, 0);
+    while (true) {
+        char buf[BUFSZ];
+        memset(buf, 0, BUFSZ);
+        size_t count = recv(cdata->csock, buf, BUFSZ - 1, 0);
 
-    // Interpretar a mensagem aqui, buf
-    printf("INTERPRETANDO: %s", buf);
-    char delim[] = " "; // Delimitador da mensagem
-    char *ptr = strtok(buf, delim);
-    while(ptr != NULL){
-        printf("Word: '%s'\n", ptr);
+        // Interpretar a mensagem aqui, buf
+        printf("INTERPRETANDO: %s", buf);
+        char delim[] = " "; // Delimitador da mensagem
+        char *ptr = strtok(buf, delim);
+        while (ptr != NULL) {
+            printf("Word: '%s'\n", ptr);
 
-        // Check if the word starts with '+'
-        if (ptr[0] == 43) {
-            //Add word without '+' and last character
-            char *newString = ptr + 1; // remove '+' from the start
-            if (newString[strlen(newString)-1] == '\n'){  // Remove newline '\n' if exists
-                newString[strlen(newString)-1] = '\0';
-            }
-            strcpy(cdata->tags[cdata->last_tag], newString); //Put subscribed word in a vector of this user
-            printf("Subscribed %s\n", cdata->tags[cdata->last_tag]);
-            cdata->last_tag += 1;
-        }
-
-        // Check if the word starts with '-'
-        else if (ptr[0] == 45) {
-            // Find word if exists
-            char *newString = ptr + 1; // remove '-' from the start
-            if (newString[strlen(newString)-1] == '\n'){ // Remove newline '\n' if exists
-                newString[strlen(newString)-1] = '\0';
+            // Check if the word starts with '+'
+            if (ptr[0] == 43) {
+                //Add word without '+' and last character
+                char *newString = ptr + 1; // remove '+' from the start
+                if (newString[strlen(newString) - 1] == '\n') {  // Remove newline '\n' if exists
+                    newString[strlen(newString) - 1] = '\0';
+                }
+                strcpy(cdata->tags[cdata->last_tag], newString); //Put subscribed word in a vector of this user
+                printf("Subscribed %s\n", cdata->tags[cdata->last_tag]);
+                cdata->last_tag += 1;
             }
 
-            // Verify if already subscribed
-            int i;
-            for (i = 0; i <= cdata->last_tag; ++i) {
-                if (strcmp(newString, cdata->tags[i]) == 0) {
-                    // if exist, unsubscribe
-                    printf("Unsubscribed %s\n", cdata->tags[i]);
+                // Check if the word starts with '-'
+            else if (ptr[0] == 45) {
+                // Find word if exists
+                char *newString = ptr + 1; // remove '-' from the start
+                if (newString[strlen(newString) - 1] == '\n') { // Remove newline '\n' if exists
+                    newString[strlen(newString) - 1] = '\0';
+                }
 
-                    // verify if we need to 'move' subscriptions on the array to not have any empty
-                    if (i < cdata->last_tag){
-                        int j;
-                        for (j = i; j < cdata->last_tag; ++j) {
-                            strcpy(cdata->tags[j], cdata->tags[j+1]);
+                // Verify if already subscribed
+                int i;
+                for (i = 0; i <= cdata->last_tag; ++i) {
+                    if (strcmp(newString, cdata->tags[i]) == 0) {
+                        // if exist, unsubscribe
+                        printf("Unsubscribed %s\n", cdata->tags[i]);
+
+                        // verify if we need to 'move' subscriptions on the array to not have any empty
+                        if (i < cdata->last_tag) {
+                            int j;
+                            for (j = i; j < cdata->last_tag; ++j) {
+                                strcpy(cdata->tags[j], cdata->tags[j + 1]);
+                            }
                         }
+                        cdata->last_tag -= 1;
+                        break;
                     }
-                    cdata->last_tag -= 1;
-                    break;
                 }
             }
+            ptr = strtok(NULL, delim);
         }
-        ptr = strtok(NULL, delim);
-        printf("Last subs  %s  %s  %d\n", cdata->tags[0], cdata->tags[cdata->last_tag], cdata->last_tag);
+        printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
+        char buf2[BUFSZ];
+        sprintf(buf2, "Test Message!\n");
+        count = send(cdata->csock, buf2, strlen(buf2) + 1, 0);
+        if (count != strlen(buf2) + 1) {
+            logexit("send fail");
+        }
+        printf("Send?");
     }
-
-    /*printf("---------");
-
-    for (int i = 0; i < BUFSZ; i++)
-    {
-        printf("%d ", buf[i]);
-    }*/
-
-    // End
-
-    printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
-
-    sprintf(buf, "remote endpoint: %.1000s\n", caddrstr);
-    count = send(cdata->csock, buf, strlen(buf) + 1, 0);
-    if (count != strlen(buf) + 1) {
-        logexit("send");
-    }
-    close(cdata->csock);
-
-    pthread_exit(EXIT_SUCCESS);
+    //close(cdata->csock);
+    //pthread_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv) {
@@ -259,7 +250,7 @@ int main(int argc, char **argv) {
         pthread_t tid;
         pthread_create(&tid, NULL, client_thread, cdata);
     }
-
+    printf("exiting server");
     exit(EXIT_SUCCESS);
 }
 

@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 
 void logexit(const char *msg) {
+    printf("Error!");
 	perror(msg);
 	exit(EXIT_FAILURE);
 }
