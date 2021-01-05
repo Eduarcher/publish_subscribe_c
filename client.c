@@ -55,21 +55,10 @@ int main(int argc, char **argv) {
         }
 
         memset(buf, 0, BUFSZ);
-        unsigned total = 0;
-        while (1) {
-            printf("waiting to receive... ");
-            count = recv(s, buf + total, BUFSZ - total, 0);
-            printf("received? %s", buf);
-            total += count;
-            //if (count == 0) {
-                // Connection terminated.
-                break;
-            //}
-        }
-        printf("received %u bytes\n", total);
+        count = recv(s, buf, BUFSZ, 0);
+        printf("%s", buf);
     }
 	close(s);
-	puts(buf);
 	exit(EXIT_SUCCESS);
 }
 

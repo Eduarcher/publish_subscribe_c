@@ -12,7 +12,7 @@
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
-#define BUFSZ 1024
+#define BUFSZ 500
 
 void usage(int argc, char **argv) {
     printf("usage: %s <v4|v6> <server port>\n", argv[0]);
@@ -117,7 +117,7 @@ int server_sockaddr_init(const char *proto, const char *portstr,
 struct client_data {
     int csock;
     struct sockaddr_storage storage;
-    char tags[10][30];
+    char tags[256][30];
     int last_tag;
 };
 
@@ -125,50 +125,66 @@ void * client_thread(void *data) {
     struct client_data *cdata = (struct client_data *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
 
+    int kill_sig = 0;
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
 
-    while (true) {
+    while (kill_sig == 0) {
         char buf[BUFSZ];
+        char buf2[BUFSZ];
         memset(buf, 0, BUFSZ);
         size_t count = recv(cdata->csock, buf, BUFSZ - 1, 0);
 
         // Interpretar a mensagem aqui, buf
-        printf("INTERPRETANDO: %s", buf);
+        printf("INTERPRETANDO: %s\n", buf);
         char delim[] = " "; // Delimitador da mensagem
-        char *ptr = strtok(buf, delim);
-        while (ptr != NULL) {
-            printf("Word: '%s'\n", ptr);
-
+        char *word = strtok(buf, delim);
+        while (word != NULL) {
             // Check if the word starts with '+'
-            if (ptr[0] == 43) {
+            if (word[0] == 43) {
                 //Add word without '+' and last character
-                char *newString = ptr + 1; // remove '+' from the start
-                if (newString[strlen(newString) - 1] == '\n') {  // Remove newline '\n' if exists
-                    newString[strlen(newString) - 1] = '\0';
-                }
-                strcpy(cdata->tags[cdata->last_tag], newString); //Put subscribed word in a vector of this user
-                printf("Subscribed %s\n", cdata->tags[cdata->last_tag]);
-                cdata->last_tag += 1;
-            }
-
-                // Check if the word starts with '-'
-            else if (ptr[0] == 45) {
-                // Find word if exists
-                char *newString = ptr + 1; // remove '-' from the start
-                if (newString[strlen(newString) - 1] == '\n') { // Remove newline '\n' if exists
-                    newString[strlen(newString) - 1] = '\0';
+                char *cleanWord = word + 1; // remove '+' from the start
+                if (cleanWord[strlen(cleanWord) - 1] == '\n') {  // Remove newline '\n' if exists
+                    cleanWord[strlen(cleanWord) - 1] = '\0';
                 }
 
                 // Verify if already subscribed
                 int i;
+                int already_sub = 0;
                 for (i = 0; i <= cdata->last_tag; ++i) {
-                    if (strcmp(newString, cdata->tags[i]) == 0) {
-                        // if exist, unsubscribe
-                        printf("Unsubscribed %s\n", cdata->tags[i]);
+                    if (strcmp(cleanWord, cdata->tags[i]) == 0) {
+                        // if exist, do not subscribe
+                        sprintf(buf2, "already subscribed +%s\n", cdata->tags[i]);
+                        already_sub = 1;
+                        break;
+                    }
+                }
+                // if not sub already, sub right now
+                if (already_sub == 0){
+                    strcpy(cdata->tags[cdata->last_tag], cleanWord); //Put subscribed word in a vector of this user
+                    sprintf(buf2, "subscribed +%s\n", cdata->tags[cdata->last_tag]);
+                    cdata->last_tag += 1;
+                }
+            }
 
-                        // verify if we need to 'move' subscriptions on the array to not have any empty
+            // Check if the word starts with '-'
+            else if (word[0] == 45) {
+                // Find word if exists
+                char *cleanWord = word + 1; // remove '-' from the start
+                if (cleanWord[strlen(cleanWord) - 1] == '\n') { // Remove newline '\n' if exists
+                    cleanWord[strlen(cleanWord) - 1] = '\0';
+                }
+
+                // Verify if already subscribed
+                int i;
+                int not_sub = 0;
+                for (i = 0; i <= cdata->last_tag; ++i) {
+                    if (strcmp(cleanWord, cdata->tags[i]) == 0) {
+                        // if exist, unsubscribe
+                        sprintf(buf2, "unsubscribed -%s\n", cdata->tags[i]);
+
+                        // verify if we need to 'move' subscriptions on the array to not have any empty space (the famous 'dança das cadeiras')
                         if (i < cdata->last_tag) {
                             int j;
                             for (j = i; j < cdata->last_tag; ++j) {
@@ -176,23 +192,34 @@ void * client_thread(void *data) {
                             }
                         }
                         cdata->last_tag -= 1;
+                        not_sub = 1;
                         break;
                     }
                 }
+                // If not sub, send 'not sub' message
+                if (not_sub == 0){
+                    sprintf(buf2, "not subscribed -%s\n", cleanWord);
+                }
             }
-            ptr = strtok(NULL, delim);
+
+            else if(strcmp(word, "##kill\n") == 0){
+                kill_sig = 1;
+            }
+
+            word = strtok(NULL, delim);
         }
-        printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
-        char buf2[BUFSZ];
-        sprintf(buf2, "Test Message!\n");
-        count = send(cdata->csock, buf2, strlen(buf2) + 1, 0);
-        if (count != strlen(buf2) + 1) {
-            logexit("send fail");
+        //printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
+
+        // Send the return message (if user session not killed)
+        if (kill_sig != 1){
+            count = send(cdata->csock, buf2, strlen(buf2) + 1, 0);
+            if (count != strlen(buf2) + 1) {
+                logexit("send fail");
+            }
         }
-        printf("Send?");
     }
-    //close(cdata->csock);
-    //pthread_exit(EXIT_SUCCESS);
+    close(cdata->csock);
+    pthread_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv) {
