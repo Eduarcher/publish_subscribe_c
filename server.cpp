@@ -15,6 +15,7 @@
 #define BUFSZ 501
 
 char published_message[BUFSZ] = "";
+int kill_them_all = 0;
 
 void usage(int argc, char **argv) {
     printf("usage: %s <server port>\n", argv[0]);
@@ -152,7 +153,7 @@ void * client_thread(void *data) {
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
 
-    while (kill_sig == 0) {
+    while (kill_sig == 0 and kill_them_all == 0) {
         char buf[BUFSZ];
         char buf2[BUFSZ];
         memset(buf, 0, BUFSZ);
@@ -230,9 +231,11 @@ void * client_thread(void *data) {
                 }
             }
 
-            // Kill user?
+            // Kill server?
             else if(strcmp(word, "##kill\n") == 0){
-                kill_sig = 1;
+//                kill_sig = 1; // this only kill the user
+                kill_them_all = 1;
+                logexit("ending this shit right now");
             }
 
             // if not tag, then check for '#'

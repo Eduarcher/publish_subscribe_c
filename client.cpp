@@ -21,7 +21,6 @@ void usage(int argc, char **argv) {
 
 
 void logexit(const char *msg) {
-    printf("Error!");
     perror(msg);
     exit(EXIT_FAILURE);
 }
@@ -93,10 +92,14 @@ void addrtostr(const struct sockaddr *addr, char *str, size_t strsize) {
 
 void * client_receive_subthread(void *s_sock){
     int ss_sock = *(int *)s_sock;
+    int count;
     while(1){
         char buf[BUFSZ];
         memset(buf, 0, BUFSZ);
-        recv(ss_sock, buf, BUFSZ, 0);
+        count = recv(ss_sock, buf, BUFSZ, 0);
+        if (count == 0){
+            logexit("ending");
+        }
         printf("[received] %s", buf);
     }
 }
