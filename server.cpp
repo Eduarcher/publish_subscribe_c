@@ -12,7 +12,9 @@
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
-#define BUFSZ 500
+#define BUFSZ 501
+
+char published_message[BUFSZ] = "";
 
 void usage(int argc, char **argv) {
     printf("usage: %s <v4|v6> <server port>\n", argv[0]);
@@ -121,11 +123,32 @@ struct client_data {
     int last_tag;
 };
 
+
+void * client_publish_subthread(void *data){
+    printf("Publication subthread online\n");
+    struct client_data *cdata = (struct client_data *)data;
+    char latest_message[BUFSZ];
+    strcpy(latest_message, published_message);
+
+    while(true){
+        if(strcmp(latest_message, published_message) == 0){
+            usleep(50000);
+        }
+        else{
+            send(cdata->csock, published_message, strlen(published_message) + 1, 0);
+            strcpy(latest_message, published_message);
+        }
+    }
+}
+
+
 void * client_thread(void *data) {
     struct client_data *cdata = (struct client_data *)data;
     struct sockaddr *caddr = (struct sockaddr *)(&cdata->storage);
 
     int kill_sig = 0;
+    int send_return_message = 0;
+
     char caddrstr[BUFSZ];
     addrtostr(caddr, caddrstr, BUFSZ);
     printf("[log] connection from %s\n", caddrstr);
@@ -138,6 +161,8 @@ void * client_thread(void *data) {
 
         // Interpretar a mensagem aqui, buf
         printf("INTERPRETANDO: %s\n", buf);
+        char full_message[BUFSZ];
+        strcpy(full_message, buf);
         char delim[] = " "; // Delimitador da mensagem
         char *word = strtok(buf, delim);
         while (word != NULL) {
@@ -157,6 +182,7 @@ void * client_thread(void *data) {
                         // if exist, do not subscribe
                         sprintf(buf2, "already subscribed +%s\n", cdata->tags[i]);
                         already_sub = 1;
+                        send_return_message = 1;
                         break;
                     }
                 }
@@ -165,6 +191,7 @@ void * client_thread(void *data) {
                     strcpy(cdata->tags[cdata->last_tag], cleanWord); //Put subscribed word in a vector of this user
                     sprintf(buf2, "subscribed +%s\n", cdata->tags[cdata->last_tag]);
                     cdata->last_tag += 1;
+                    send_return_message = 1;
                 }
             }
 
@@ -193,17 +220,25 @@ void * client_thread(void *data) {
                         }
                         cdata->last_tag -= 1;
                         not_sub = 1;
+                        send_return_message = 1;
                         break;
                     }
                 }
                 // If not sub, send 'not sub' message
                 if (not_sub == 0){
                     sprintf(buf2, "not subscribed -%s\n", cleanWord);
+                    send_return_message = 1;
                 }
             }
 
+            // Kill user?
             else if(strcmp(word, "##kill\n") == 0){
                 kill_sig = 1;
+            }
+
+            // if not tag, then check for '#'
+            else if (word[0] == 35) {
+                strcpy(published_message, full_message);
             }
 
             word = strtok(NULL, delim);
@@ -211,12 +246,13 @@ void * client_thread(void *data) {
         //printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
 
         // Send the return message (if user session not killed)
-        if (kill_sig != 1){
+        if (kill_sig != 1 and send_return_message == 1){
             count = send(cdata->csock, buf2, strlen(buf2) + 1, 0);
             if (count != strlen(buf2) + 1) {
                 logexit("send fail");
             }
         }
+        send_return_message = 0;
     }
     close(cdata->csock);
     pthread_exit(EXIT_SUCCESS);
@@ -275,7 +311,12 @@ int main(int argc, char **argv) {
         cdata->last_tag = 0;
 
         pthread_t tid;
+        pthread_t tid2;
+        // Thread to update tags and server-client interaction
         pthread_create(&tid, NULL, client_thread, cdata);
+
+        // Thread to watch for messages to publish
+        pthread_create(&tid2, NULL, client_publish_subthread, cdata);
     }
     printf("exiting server");
     exit(EXIT_SUCCESS);

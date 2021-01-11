@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "EndlessLoop"
@@ -18,6 +19,15 @@ void usage(int argc, char **argv) {
 }
 
 #define BUFSZ 1024
+
+void * client_receive_subthread(int s_sock){
+    char buf[BUFSZ];
+    while(1){
+        memset(buf, 0, BUFSZ);
+        recv(s_sock, buf, BUFSZ, 0);
+        printf("%s", buf);
+    }
+}
 
 int main(int argc, char **argv) {
 	if (argc < 3) {
@@ -44,6 +54,9 @@ int main(int argc, char **argv) {
 
 	printf("connected to %s\n", addrstr);
 
+    pthread_t tid;
+    pthread_create(&tid, NULL, client_receive_subthread, s);
+
 	char buf[BUFSZ];
 	memset(buf, 0, BUFSZ);
 	while(1) {
@@ -53,10 +66,6 @@ int main(int argc, char **argv) {
         if (count != strlen(buf) + 1) {
             logexit("send");
         }
-
-        memset(buf, 0, BUFSZ);
-        count = recv(s, buf, BUFSZ, 0);
-        printf("%s", buf);
     }
 	close(s);
 	exit(EXIT_SUCCESS);
