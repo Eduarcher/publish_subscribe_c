@@ -17,8 +17,8 @@
 char published_message[BUFSZ] = "";
 
 void usage(int argc, char **argv) {
-    printf("usage: %s <v4|v6> <server port>\n", argv[0]);
-    printf("example: %s v4 51511\n", argv[0]);
+    printf("usage: %s <server port>\n", argv[0]);
+    printf("example: %s 51511\n", argv[0]);
     exit(EXIT_FAILURE);
 }
 
@@ -97,7 +97,6 @@ int server_sockaddr_init(const char *proto, const char *portstr,
         return -1;
     }
     port = htons(port); // host to network short
-
     memset(storage, 0, sizeof(*storage));
     if (0 == strcmp(proto, "v4")) {
         struct sockaddr_in *addr4 = (struct sockaddr_in *)storage;
@@ -259,12 +258,12 @@ void * client_thread(void *data) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 3) {
+    if (argc < 2) {
         usage(argc, argv);
     }
 
     struct sockaddr_storage storage;
-    if (0 != server_sockaddr_init(argv[1], argv[2], &storage)) {
+    if (0 != server_sockaddr_init("v4", argv[1], &storage)) {
         usage(argc, argv);
     }
 

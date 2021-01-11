@@ -1,7 +1,7 @@
 ### Execute server(s) on multithread
 usage: ./server <v4|v6> <server port>
 
-example: ./server v4 51511
+example: ./server 51511
 
 
 ### Execute client(s)
