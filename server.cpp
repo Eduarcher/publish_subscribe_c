@@ -14,8 +14,6 @@
 #pragma ide diagnostic ignored "EndlessLoop"
 #define BUFSZ 501
 
-char published_message[BUFSZ] = "";
-int kill_them_all = 0;
 
 void usage(int argc, char **argv) {
     printf("usage: %s <server port>\n", argv[0]);
@@ -119,24 +117,40 @@ int server_sockaddr_init(const char *proto, const char *portstr,
 struct client_data {
     int csock;
     struct sockaddr_storage storage;
-    char tags[256][30];
+    char tags[256][BUFSZ];
     int last_tag;
 };
 
+struct publication {
+    char published_message[BUFSZ] = "";
+};
+
+struct publication publication;
+int kill_them_all = 0;
 
 void * client_publish_subthread(void *data){
     printf("Publication subthread online\n");
     struct client_data *cdata = (struct client_data *)data;
     char latest_message[BUFSZ];
-    strcpy(latest_message, published_message);
+    strcpy(latest_message, publication.published_message);
 
+   // Loop to publish message, when new message arrives
     while(true){
-        if(strcmp(latest_message, published_message) == 0){
+        if(strcmp(latest_message, publication.published_message) == 0){
             usleep(50000);
         }
         else{
-            send(cdata->csock, published_message, strlen(published_message) + 1, 0);
-            strcpy(latest_message, published_message);
+            // if new, check for tags
+            for (int i = 0; i < cdata->last_tag; ++i) {
+                char buf[BUFSZ];
+                snprintf(buf, sizeof buf+1, "%s%s", "#", cdata->tags[i]);
+                if (strstr(publication.published_message, buf) != NULL) {
+                    // if tag exist to client, post the full message
+                    send(cdata->csock, publication.published_message, strlen(publication.published_message) + 1, 0);
+                    break;
+                }
+            }
+            strcpy(latest_message, publication.published_message);
         }
     }
 }
@@ -240,7 +254,7 @@ void * client_thread(void *data) {
 
             // if not tag, then check for '#'
             else if (word[0] == 35) {
-                strcpy(published_message, full_message);
+                strcpy(publication.published_message, full_message);
             }
 
             word = strtok(NULL, delim);
