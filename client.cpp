@@ -101,6 +101,9 @@ void * client_receive_subthread(void *s_sock){
             logexit("ending");
         }
         printf("[received] %s", buf);
+//        for (int i = 0; i <= (int)strlen(buf); ++i) {
+//            printf("%d ", buf[i]);
+//        }
     }
 }
 

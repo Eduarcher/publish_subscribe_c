@@ -180,7 +180,7 @@ void * client_thread(void *data) {
                 for (i = 0; i <= cdata->last_tag; ++i) {
                     if (strcmp(cleanWord, cdata->tags[i]) == 0) {
                         // if exist, do not subscribe
-                        sprintf(buf2, "already subscribed +%s\n", cdata->tags[i]);
+                        sprintf(buf2, "already subscribed +%s\n", cleanWord);
                         already_sub = 1;
                         send_return_message = 1;
                         break;
@@ -189,7 +189,7 @@ void * client_thread(void *data) {
                 // if not sub already, sub right now
                 if (already_sub == 0){
                     strcpy(cdata->tags[cdata->last_tag], cleanWord); //Put subscribed word in a vector of this user
-                    sprintf(buf2, "subscribed +%s\n", cdata->tags[cdata->last_tag]);
+                    sprintf(buf2, "subscribed +%s\n", cleanWord);
                     cdata->last_tag += 1;
                     send_return_message = 1;
                 }
@@ -209,7 +209,7 @@ void * client_thread(void *data) {
                 for (i = 0; i <= cdata->last_tag; ++i) {
                     if (strcmp(cleanWord, cdata->tags[i]) == 0) {
                         // if exist, unsubscribe
-                        sprintf(buf2, "unsubscribed -%s\n", cdata->tags[i]);
+                        sprintf(buf2, "unsubscribed -%s\n", cleanWord);
 
                         // verify if we need to 'move' subscriptions on the array to not have any empty space (the famous 'dança das cadeiras')
                         if (i < cdata->last_tag) {
@@ -249,8 +249,8 @@ void * client_thread(void *data) {
 
         // Send the return message (if user session not killed)
         if (kill_sig != 1 and send_return_message == 1){
-            count = send(cdata->csock, buf2, strlen(buf2) + 1, 0);
-            if (count != strlen(buf2) + 1) {
+            count = send(cdata->csock, buf2, strlen(buf2), 0);
+            if (count != strlen(buf2)) {
                 logexit("send fail");
             }
         }
