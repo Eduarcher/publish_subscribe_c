@@ -100,6 +100,7 @@ void * client_receive_subthread(void *s_sock){
         if (count == 0){
             logexit("ending");
         }
+        //TODO remove received before submit
         printf("[received] %s", buf);
 //        for (int i = 0; i <= (int)strlen(buf); ++i) {
 //            printf("%d ", buf[i]);

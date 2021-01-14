@@ -177,6 +177,17 @@ void * client_thread(void *data) {
         memset(buf, 0, BUFSZ);
         size_t count = recv(cdata->csock, buf, BUFSZ - 1, 0);
 
+        // Verificar se é grande demais
+        if (count > BUFSZ){
+            break;
+        }
+
+        // verificar se tem caractere inválido
+        char okchar[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz,.?!:;+-*/=@#$%()[]{} 0123456789\n";
+        if (strspn(buf, okchar) != strlen(buf)){
+            break;
+        }
+
         // Interpretar a mensagem aqui, buf
         printf("INTERPRETANDO: %s\n", buf);
         char full_message[BUFSZ];
