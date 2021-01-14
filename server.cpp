@@ -123,6 +123,7 @@ struct client_data {
 
 struct publication {
     char published_message[BUFSZ] = "";
+    int id = 0;
 };
 
 struct publication publication;
@@ -131,12 +132,14 @@ int kill_them_all = 0;
 void * client_publish_subthread(void *data){
     printf("Publication subthread online\n");
     struct client_data *cdata = (struct client_data *)data;
-    char latest_message[BUFSZ];
-    strcpy(latest_message, publication.published_message);
+    struct publication last_publication;
+    strcpy(last_publication.published_message, publication.published_message);
+    last_publication.id = publication.id;
 
    // Loop to publish message, when new message arrives
     while(true){
-        if(strcmp(latest_message, publication.published_message) == 0){
+
+        if(last_publication.id == publication.id){
             usleep(50000);
         }
         else{
@@ -150,7 +153,8 @@ void * client_publish_subthread(void *data){
                     break;
                 }
             }
-            strcpy(latest_message, publication.published_message);
+            strcpy(last_publication.published_message, publication.published_message);
+            last_publication.id = publication.id;
         }
     }
 }
@@ -255,6 +259,7 @@ void * client_thread(void *data) {
             // if not tag, then check for '#'
             else if (word[0] == 35) {
                 strcpy(publication.published_message, full_message);
+                publication.id++;
             }
 
             word = strtok(NULL, delim);
