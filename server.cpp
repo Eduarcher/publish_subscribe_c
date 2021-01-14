@@ -278,7 +278,9 @@ int main(int argc, char **argv) {
     if (argc < 2) {
         usage(argc, argv);
     }
-
+//    printf("flag");
+//    fflush(stdout);
+//    sleep(5);
     struct sockaddr_storage storage;
     if (0 != server_sockaddr_init("v4", argv[1], &storage)) {
         usage(argc, argv);
@@ -297,6 +299,8 @@ int main(int argc, char **argv) {
 
     struct sockaddr *addr = (struct sockaddr *)(&storage);
     if (0 != bind(s, addr, sizeof(storage))) {
+        printf("Problema no bind");
+        sleep(1000);
         logexit("bind");
     }
 
